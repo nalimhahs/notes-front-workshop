@@ -18,7 +18,7 @@ export default props => {
   return (
     <Modal width="35rem" {...props.bindings}>
       <Modal.Title>
-        <Text h2>New Note</Text>
+        <Text b>New Note</Text>
       </Modal.Title>
       <Spacer y={1} />
       <Modal.Content>

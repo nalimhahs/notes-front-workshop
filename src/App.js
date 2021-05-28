@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GeistProvider, CssBaseline } from '@geist-ui/react';
 import {
   Page,
@@ -10,38 +10,55 @@ import {
   Grid,
   Divider,
   Code,
-  useModal
+  useModal,
+  Loading
 } from '@geist-ui/react';
+import axios from 'axios';
 
 import Note from './components/Note.js';
 import AddNote from './components/AddNote.js';
 
+const BASE_URL = 'https://todo-acm.herokuapp.com/';
+
 export default function App() {
   const { visible, setVisible, bindings } = useModal();
   const [notes, setNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const getNotes = async () => {
+    const res = await axios.get(BASE_URL);
+    return res.data;
+  };
+
+  const updateNotes = async () => {
+    setLoading(true);
+    const data = await getNotes();
+    setNotes(data);
+    setLoading(false);
+  };
 
   const handleDelete = async id => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    var temp = [...notes];
-    temp = temp.filter(note => {
-      return note.id !== id;
-    });
-    setNotes(temp);
-    console.log('Deleted: ', id);
+    const res = await axios.delete(BASE_URL + id + '/');
+    updateNotes();
   };
 
   const handleAdd = async (title, content) => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setNotes([
-      ...notes,
-      {
-        title: title,
-        content: content,
-        id: (notes[notes.length - 1]?.id + 1) | 0
-      }
-    ]);
+    const res = await axios.post(BASE_URL, {
+      title: title,
+      content: content,
+      end_date: new Date()
+    });
+    updateNotes();
     setVisible(false);
   };
+
+  useEffect(() => {
+    getNotes().then(data => {
+      setLoading(true);
+      setNotes(data);
+      setLoading(false);
+    });
+  }, []);
 
   return (
     <GeistProvider>
@@ -55,7 +72,7 @@ export default function App() {
         <Row justify="space-between" align="middle">
           <Col>
             <Code size="1.35rem" block width="11rem">
-              You have {notes.length} notes!
+              You have {notes?.length} notes!
             </Code>
           </Col>
           <Col style={{ float: 'right' }}>
@@ -74,20 +91,27 @@ export default function App() {
         <Spacer y={3} />
         <Divider />
         <Spacer y={6} />
-        <Grid.Container gap={2} justify="left">
-          {notes?.map(note => {
-            return (
-              <Grid xs={24} sm={12} md={8} alignItems="baseline">
-                <Note
-                  id={note.id}
-                  heading={note.title}
-                  content={note.content}
-                  onDelete={() => handleDelete(note.id)}
-                />
-              </Grid>
-            );
-          })}
-        </Grid.Container>
+        {loading ? (
+          <Row style={{ padding: '10px 0' }}>
+            <Loading size="large" />
+          </Row>
+        ) : (
+          <Grid.Container gap={2} justify="left">
+            {notes?.map(note => {
+              return (
+                <Grid xs={24} sm={12} md={8} alignItems="baseline">
+                  <Note
+                    key={note.id}
+                    id={note.id}
+                    heading={note.title}
+                    content={note.content}
+                    onDelete={() => handleDelete(note.id)}
+                  />
+                </Grid>
+              );
+            })}
+          </Grid.Container>
+        )}
       </Page>
       <AddNote
         bindings={bindings}
